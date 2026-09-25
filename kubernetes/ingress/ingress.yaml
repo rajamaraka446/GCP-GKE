@@ -1,34 +1,28 @@
 apiVersion: networking.k8s.io/v1
-kind: Ingress
+kind: MultiClusterIngress
 metadata:
   name: production-ingress
   namespace: production
 
   annotations:
-    kubernetes.io/ingress.class: "gce"
+    networking.gke.io/static-ip: customer-traffic-ip
     networking.gke.io/managed-certificates: production-cert
-    networking.gke.io/v1beta1.FrontendConfig: https-redirect
 
 spec:
-  rules:
-
-  - host: app.example.com
-
-    http:
-      paths:
-
-      - path: /webapp-a
-        pathType: Prefix
-        backend:
-          service:
-            name: webapp-a-service
-            port:
-              number: 80
-
-      - path: /webapp-b
-        pathType: Prefix
-        backend:
-          service:
-            name: webapp-b-service
-            port:
-              number: 80
+  template:
+    spec:
+      backend:
+        serviceName: webapp-a
+        servicePort: 80
+      rules:
+      - host: app.example.com
+        http:
+          paths:
+          - path: /webapp-a/*
+            backend:
+              serviceName: webapp-a
+              servicePort: 80
+          - path: /webapp-b/*
+            backend:
+              serviceName: webapp-b
+              servicePort: 80

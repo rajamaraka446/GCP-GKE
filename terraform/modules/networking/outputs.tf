@@ -25,3 +25,19 @@ output "secondary_pod_range" {
 output "secondary_service_range" {
   value = google_compute_subnetwork.secondary.secondary_ip_range[1].range_name
 }
+
+output "lb_primary_subnet" {
+  value = google_compute_subnetwork.lb_primary.name
+}
+
+output "lb_secondary_subnet" {
+  value = google_compute_subnetwork.lb_secondary.name
+}
+
+output "ops_primary_subnet" {
+  value = google_compute_subnetwork.ops_primary.name
+}
+
+output "ops_secondary_subnet" {
+  value = google_compute_subnetwork.ops_secondary.name
+}

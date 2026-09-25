@@ -6,6 +6,11 @@ metadata:
 
 spec:
   timeoutSec: 30
+  securityPolicy:
+    name: customer-traffic-waf
+  logging:
+    enable: true
+    sampleRate: 1.0
   connectionDraining:
     drainingTimeoutSec: 60
 

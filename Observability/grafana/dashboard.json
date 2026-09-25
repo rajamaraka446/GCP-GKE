@@ -1,1 +1,66 @@
-{"title":"GKE Dashboard","panels":[]}
+{
+	"title": "GKE Production Observability",
+	"schemaVersion": 39,
+	"version": 1,
+	"refresh": "30s",
+	"time": { "from": "now-6h", "to": "now" },
+	"templating": {
+		"list": [
+			{ "name": "project", "type": "constant", "query": "PROJECT_ID", "label": "GCP project" },
+			{ "name": "namespace", "type": "constant", "query": "production", "label": "Namespace" }
+		]
+	},
+	"panels": [
+		{
+			"id": 1,
+			"title": "Application error rate",
+			"type": "timeseries",
+			"gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+			"datasource": { "type": "bigquery", "uid": "BIGQUERY_DATASOURCE_UID" },
+			"targets": [{
+				"format": "time_series",
+				"rawQuery": true,
+				"rawSql": "SELECT TIMESTAMP_TRUNC(timestamp, MINUTE) AS time, COUNT(*) AS error_count FROM `${project}.gke_observability._AllLogs` WHERE resource.type = 'k8s_container' AND severity >= 'ERROR' AND timestamp BETWEEN TIMESTAMP_MILLIS($__from) AND TIMESTAMP_MILLIS($__to) GROUP BY time ORDER BY time"
+			}],
+			"fieldConfig": { "defaults": { "unit": "errors/sec" }, "overrides": [] }
+		},
+		{
+			"id": 2,
+			"title": "Pod restart counts by namespace",
+			"type": "timeseries",
+			"gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+			"datasource": { "type": "stackdriver", "uid": "GOOGLE_CLOUD_MONITORING_UID" },
+			"targets": [{
+				"expr": "sum by (namespace) (increase(kubernetes_io:container_restart_count{namespace=~\"$namespace\"}[5m]))",
+				"queryType": "promql",
+				"refId": "A"
+			}],
+			"fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+		},
+		{
+			"id": 3,
+			"title": "Ingress request latency percentiles",
+			"type": "timeseries",
+			"gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+			"datasource": { "type": "stackdriver", "uid": "GOOGLE_CLOUD_MONITORING_UID" },
+			"targets": [
+				{ "metricQuery": { "metricType": "loadbalancing.googleapis.com/https/latencies", "alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_DELTA", "crossSeriesReducer": "REDUCE_PERCENTILE_50" }, "refId": "p50" },
+				{ "metricQuery": { "metricType": "loadbalancing.googleapis.com/https/latencies", "alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_DELTA", "crossSeriesReducer": "REDUCE_PERCENTILE_95" }, "refId": "p95" },
+				{ "metricQuery": { "metricType": "loadbalancing.googleapis.com/https/latencies", "alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_DELTA", "crossSeriesReducer": "REDUCE_PERCENTILE_99" }, "refId": "p99" }
+			],
+			"fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] }
+		},
+		{
+			"id": 4,
+			"title": "Pod CPU and memory utilization",
+			"type": "timeseries",
+			"gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+			"datasource": { "type": "stackdriver", "uid": "GOOGLE_CLOUD_MONITORING_UID" },
+			"targets": [
+				{ "metricQuery": { "metricType": "kubernetes.io/container/cpu/core_usage_time", "alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_RATE", "crossSeriesReducer": "REDUCE_MEAN", "groupBys": ["resource.label.namespace_name"] }, "refId": "CPU" },
+				{ "metricQuery": { "metricType": "kubernetes.io/container/memory/used_bytes", "alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_MEAN", "crossSeriesReducer": "REDUCE_MEAN", "groupBys": ["resource.label.namespace_name"] }, "refId": "MEM" }
+			],
+			"fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] }
+		}
+	]
+}

@@ -1,0 +1,33 @@
+apiVersion: net.gke.io/v1
+kind: MultiClusterService
+metadata:
+  name: webapp-a
+  namespace: production
+  annotations:
+    cloud.google.com/backend-config: '{"default":"web-backend-config"}'
+spec:
+  template:
+    spec:
+      selector:
+        app: webapp-a
+      ports:
+      - name: http
+        port: 80
+        targetPort: 8080
+---
+apiVersion: net.gke.io/v1
+kind: MultiClusterService
+metadata:
+  name: webapp-b
+  namespace: production
+  annotations:
+    cloud.google.com/backend-config: '{"default":"web-backend-config"}'
+spec:
+  template:
+    spec:
+      selector:
+        app: webapp-b
+      ports:
+      - name: http
+        port: 80
+        targetPort: 8080
