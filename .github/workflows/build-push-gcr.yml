@@ -1,0 +1,92 @@
+name: Build and Push Docker Images to Artifact Registry
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: iris-gke-production
+  REGION: us-central1
+  REPOSITORY: production-images
+  IMAGE_A: webapp-a
+  IMAGE_B: webapp-b
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Authenticate to Google Cloud using Service Account JSON
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker Authentication
+        run: |
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+
+      ###################################################
+      # Build Flask Application
+      ###################################################
+
+      - name: Build WebApp-A Image
+        run: |
+          docker build \
+          -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_A}:${GITHUB_SHA} \
+          ./applications/webapp-a-flask
+
+      - name: Push WebApp-A Image
+        run: |
+          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_A}:${GITHUB_SHA}
+
+      - name: Tag Latest WebApp-A
+        run: |
+          docker tag \
+          ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_A}:${GITHUB_SHA} \
+          ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_A}:latest
+
+          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_A}:latest
+
+      ###################################################
+      # Build Node Application
+      ###################################################
+
+      - name: Build WebApp-B Image
+        run: |
+          docker build \
+          -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_B}:${GITHUB_SHA} \
+          ./applications/webapp-b-nodejs
+
+      - name: Push WebApp-B Image
+        run: |
+          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_B}:${GITHUB_SHA}
+
+      - name: Tag Latest WebApp-B
+        run: |
+          docker tag \
+          ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_B}:${GITHUB_SHA} \
+          ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_B}:latest
+
+          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_B}:latest
+
+      ###################################################
+      # Verify Images
+      ###################################################
+
+      - name: List Images
+        run: |
+          gcloud artifacts docker images list \
+          ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}
