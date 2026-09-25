@@ -1,0 +1,1 @@
+SELECT * FROM `PROJECT.logs.application_logs` LIMIT 100;
