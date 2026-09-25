@@ -1,5 +1,13 @@
 FROM node:20-alpine
+
 WORKDIR /app
-COPY server.js .
-RUN npm install express
-CMD ['node','server.js']
+
+COPY package.json .
+
+RUN npm install --production
+
+COPY . .
+
+EXPOSE 8080
+
+CMD ["npm","start"]
