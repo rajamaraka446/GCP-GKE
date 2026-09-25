@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp-b
+  namespace: production
+
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: webapp-b
+
+  template:
+    metadata:
+      labels:
+        app: webapp-b
+
+    spec:
+      serviceAccountName: gke-workload-sa
+
+      containers:
+      - name: webapp-b
+        image: us-central1-docker.pkg.dev/iris-gke-production/production-images/webapp-b:latest
+
+        ports:
+        - containerPort: 8080
+
+        envFrom:
+        - configMapRef:
+            name: app-config
+        - secretRef:
+            name: app-secret
+
+        resources:
+          requests:
+            cpu: "300m"
+            memory: "256Mi"
+          limits:
+            cpu: "800m"
+            memory: "768Mi"
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 20
+
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 10
