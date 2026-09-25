@@ -1,0 +1,9 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: production-cert
+  namespace: production
+
+spec:
+  domains:
+    - app.example.com
